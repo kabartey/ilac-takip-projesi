@@ -1,0 +1,6 @@
+{
+  "name": "İlaç Takip - Flutter & Firebase",
+  "description": "Flutter ve Firebase tabanlı Android/iOS ilaç takip uygulaması için modüler mimari, temiz Dart kodları ve canlı simülatör.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
