@@ -54,7 +54,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final User? firebaseUser = userCredential.user;
 
       if (firebaseUser != null) {
-        await firebaseUser.updateDisplayName(_fullNameController.text.trim());
+        try {
+          await firebaseUser.updateDisplayName(_fullNameController.text.trim());
+        } catch (e) {
+          debugPrint('DisplayName güncelleme hatası: $e');
+        }
 
         final UserModel newUser = UserModel(
           uid: firebaseUser.uid,
@@ -66,22 +70,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
           createdAt: DateTime.now(),
         );
 
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(newUser.uid)
-            .set(newUser.toMap());
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(context.tr('register_and_start')),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-          Navigator.pushReplacementNamed(context, '/home');
+        try {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(newUser.uid)
+              .set(newUser.toMap())
+              .timeout(const Duration(seconds: 10));
+        } catch (e) {
+          debugPrint('Firestore profil kaydetme uyarısı: $e');
         }
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('register_and_start')),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
       }
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       String errorMessage = context.tr('generic_error', params: {'error': ''});
       if (e.code == 'weak-password') {
         errorMessage = context.tr('weak_password');
@@ -93,22 +103,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
         errorMessage = e.message ?? errorMessage;
       }
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(errorMessage), backgroundColor: AppColors.danger),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage), backgroundColor: AppColors.danger),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('generic_error', params: {'error': e.toString()})),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('generic_error', params: {'error': e.toString()})),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

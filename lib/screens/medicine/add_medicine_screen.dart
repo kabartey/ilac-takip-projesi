@@ -188,7 +188,11 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
 
       String? imageUrl;
       if (_imageFile != null) {
-        imageUrl = await _uploadImage(uid, medicineId);
+        try {
+          imageUrl = await _uploadImage(uid, medicineId);
+        } catch (e) {
+          debugPrint('Fotoğraf yükleme hatası: $e');
+        }
       }
 
       final MedicineModel newMedicine = MedicineModel(
@@ -206,29 +210,29 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       // Provider üzerinden ekle (hem Firestore'a yazar hem alarm kurar)
       await context.read<MedicineProvider>().addMedicine(newMedicine);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              context.tr('medicine_saved_success', params: {'name': newMedicine.name}),
-            ),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 2),
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            context.tr('medicine_saved_success', params: {'name': newMedicine.name}),
           ),
-        );
-        // Otomatik olarak önceki ekrana dön
-        Navigator.pop(context, true);
-      }
+          backgroundColor: AppColors.primary,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      // Otomatik olarak önceki ekrana dön
+      Navigator.pop(context, true);
     } catch (e) {
       debugPrint('İlaç kaydetme hatası: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('generic_error', params: {'error': e.toString()})),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('generic_error', params: {'error': e.toString()})),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);

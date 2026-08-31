@@ -38,30 +38,29 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
-      }
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
       String msg = context.tr('login_error');
       if (e.code == 'user-not-found') msg = context.tr('user_not_found');
       if (e.code == 'wrong-password') msg = context.tr('wrong_password');
       if (e.code == 'invalid-email') msg = context.tr('invalid_email');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg), backgroundColor: AppColors.danger),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: AppColors.danger),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.tr('generic_error', params: {'error': e.toString()})),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.tr('generic_error', params: {'error': e.toString()})),
+          backgroundColor: AppColors.danger,
+        ),
+      );
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
