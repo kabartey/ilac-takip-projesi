@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:meditrack_app/core/constants/app_colors.dart';
+import 'package:meditrack_app/core/localization/app_localizations.dart';
 import 'package:meditrack_app/models/medicine_model.dart';
 import 'package:meditrack_app/providers/medicine_provider.dart';
 
@@ -45,13 +46,16 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         imageQuality: 80,
       );
 
-      if (pickedFile != null) {
+      if (pickedFile != null && mounted) {
         setState(() => _imageFile = File(pickedFile.path));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fotoğraf seçilemedi: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text(context.tr('photo_error', params: {'error': e.toString()})),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     }
@@ -70,14 +74,21 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'İlaç Kutusu Fotoğrafı',
-                style: TextStyle(color: AppColors.textLight, fontWeight: FontWeight.bold, fontSize: 16),
+              Text(
+                context.tr('box_photo_title'),
+                style: const TextStyle(
+                  color: AppColors.textLight,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 16),
               ListTile(
                 leading: const Icon(Icons.camera_alt_outlined, color: AppColors.primaryLight),
-                title: const Text('Kamera ile Çek', style: TextStyle(color: AppColors.textLight)),
+                title: Text(
+                  context.tr('take_camera'),
+                  style: const TextStyle(color: AppColors.textLight),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickImage(ImageSource.camera);
@@ -85,7 +96,10 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined, color: AppColors.primaryLight),
-                title: const Text('Galeriden Seç', style: TextStyle(color: AppColors.textLight)),
+                title: Text(
+                  context.tr('choose_gallery'),
+                  style: const TextStyle(color: AppColors.textLight),
+                ),
                 onTap: () {
                   Navigator.pop(ctx);
                   _pickImage(ImageSource.gallery);
@@ -117,7 +131,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       },
     );
 
-    if (picked != null && picked != _selectedTime) {
+    if (picked != null && picked != _selectedTime && mounted) {
       setState(() => _selectedTime = picked);
     }
   }
@@ -138,10 +152,10 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         SettableMetadata(contentType: 'image/jpeg'),
       );
 
-      final TaskSnapshot snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
+      final TaskSnapshot snapshot = await uploadTask.timeout(const Duration(seconds: 15));
+      return await snapshot.ref.getDownloadURL().timeout(const Duration(seconds: 10));
     } catch (e) {
-      debugPrint('Fotoğraf yükleme hatası: $e');
+      debugPrint('Fotoğraf yükleme uyarısı/hatası: $e');
       return null;
     }
   }
@@ -152,7 +166,10 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
     final User? currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen önce giriş yapınız.'), backgroundColor: AppColors.danger),
+        SnackBar(
+          content: Text(context.tr('login_first')),
+          backgroundColor: AppColors.danger,
+        ),
       );
       return;
     }
@@ -178,7 +195,7 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         id: medicineId,
         userId: uid,
         name: _nameController.text.trim(),
-        dosage: '${_dosageController.text.trim()} Adet',
+        dosage: '${_dosageController.text.trim()} ${context.tr('dosage_unit')}',
         stock: int.parse(_stockController.text.trim()),
         timeHours: _selectedTime.hour,
         timeMinutes: _selectedTime.minute,
@@ -192,20 +209,30 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${newMedicine.name} başarıyla kaydedildi!'),
+            content: Text(
+              context.tr('medicine_saved_success', params: {'name': newMedicine.name}),
+            ),
             backgroundColor: AppColors.primary,
+            duration: const Duration(seconds: 2),
           ),
         );
+        // Otomatik olarak önceki ekrana dön
         Navigator.pop(context, true);
       }
     } catch (e) {
+      debugPrint('İlaç kaydetme hatası: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Hata oluştu: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+            content: Text(context.tr('generic_error', params: {'error': e.toString()})),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -221,12 +248,20 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textLight, size: 20),
+          icon: Icon(
+            context.isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios_new,
+            color: AppColors.textLight,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Yeni İlaç Ekle',
-          style: TextStyle(color: AppColors.textLight, fontWeight: FontWeight.bold, fontSize: 18),
+        title: Text(
+          context.tr('new_medicine_title'),
+          style: const TextStyle(
+            color: AppColors.textLight,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
       body: SafeArea(
@@ -258,13 +293,17 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       child: _imageFile == null
                           ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
-                              children: const [
-                                Icon(Icons.add_a_photo_outlined, color: AppColors.primaryLight, size: 32),
-                                SizedBox(height: 6),
+                              children: [
+                                const Icon(Icons.add_a_photo_outlined, color: AppColors.primaryLight, size: 32),
+                                const SizedBox(height: 6),
                                 Text(
-                                  'Kutu Fotoğrafı',
+                                  context.tr('box_photo'),
                                   textAlign: TextAlign.center,
-                                  style: TextStyle(color: AppColors.textMuted, fontSize: 11, fontWeight: FontWeight.w600),
+                                  style: const TextStyle(
+                                    color: AppColors.textMuted,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ],
                             )
@@ -285,13 +324,24 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('İlaç Adı', style: TextStyle(color: AppColors.textLight, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(
+                        context.tr('medicine_name'),
+                        style: const TextStyle(
+                          color: AppColors.textLight,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _nameController,
                         style: const TextStyle(color: AppColors.textLight, fontSize: 14),
-                        decoration: _inputDecoration('Örn: Parol 500mg', Icons.medication_outlined),
-                        validator: (val) => (val == null || val.trim().isEmpty) ? 'İlaç adı gerekli' : null,
+                        decoration: _inputDecoration(
+                          context.tr('med_name_example'),
+                          Icons.medication_outlined,
+                        ),
+                        validator: (val) =>
+                            (val == null || val.trim().isEmpty) ? context.tr('field_required') : null,
                       ),
                       const SizedBox(height: 16),
 
@@ -301,14 +351,22 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Doz (Adet)', style: TextStyle(color: AppColors.textLight, fontSize: 13, fontWeight: FontWeight.w600)),
+                                Text(
+                                  context.tr('dosage_label'),
+                                  style: const TextStyle(
+                                    color: AppColors.textLight,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _dosageController,
                                   keyboardType: TextInputType.number,
                                   style: const TextStyle(color: AppColors.textLight, fontSize: 14),
                                   decoration: _inputDecoration('1', Icons.numbers_outlined),
-                                  validator: (val) => (val == null || val.isEmpty) ? 'Gerekli' : null,
+                                  validator: (val) =>
+                                      (val == null || val.isEmpty) ? context.tr('field_required') : null,
                                 ),
                               ],
                             ),
@@ -318,14 +376,22 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Mevcut Stok', style: TextStyle(color: AppColors.textLight, fontSize: 13, fontWeight: FontWeight.w600)),
+                                Text(
+                                  context.tr('current_stock'),
+                                  style: const TextStyle(
+                                    color: AppColors.textLight,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _stockController,
                                   keyboardType: TextInputType.number,
                                   style: const TextStyle(color: AppColors.textLight, fontSize: 14),
                                   decoration: _inputDecoration('20', Icons.inventory_2_outlined),
-                                  validator: (val) => (val == null || val.isEmpty) ? 'Gerekli' : null,
+                                  validator: (val) =>
+                                      (val == null || val.isEmpty) ? context.tr('field_required') : null,
                                 ),
                               ],
                             ),
@@ -334,7 +400,14 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                       ),
                       const SizedBox(height: 16),
 
-                      const Text('Hatırlatma Saati', style: TextStyle(color: AppColors.textLight, fontSize: 13, fontWeight: FontWeight.w600)),
+                      Text(
+                        context.tr('reminder_time'),
+                        style: const TextStyle(
+                          color: AppColors.textLight,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                       const SizedBox(height: 6),
                       InkWell(
                         onTap: _selectTime,
@@ -370,9 +443,13 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                                   color: AppColors.primary.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
-                                  'Değiştir',
-                                  style: TextStyle(color: AppColors.primaryLight, fontSize: 12, fontWeight: FontWeight.w600),
+                                child: Text(
+                                  context.tr('change'),
+                                  style: const TextStyle(
+                                    color: AppColors.primaryLight,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ],
@@ -401,12 +478,15 @@ class _AddMedicineScreenState extends State<AddMedicineScreen> {
                             height: 24,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                           )
-                        : const Row(
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.save_outlined, size: 20),
-                              SizedBox(width: 8),
-                              Text('İlacı Kaydet & Alarm Kur', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                              const Icon(Icons.save_outlined, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                context.tr('save_medicine_btn'),
+                                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
                             ],
                           ),
                   ),

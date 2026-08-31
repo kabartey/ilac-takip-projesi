@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:meditrack_app/core/constants/app_colors.dart';
+import 'package:meditrack_app/core/localization/app_localizations.dart';
 import 'package:meditrack_app/core/services/firebase_service.dart';
 import 'package:meditrack_app/services/notification_service.dart';
 import 'package:meditrack_app/providers/medicine_provider.dart';
 import 'package:meditrack_app/providers/auth_provider.dart';
+import 'package:meditrack_app/providers/locale_provider.dart';
 import 'package:meditrack_app/screens/home/home_screen.dart';
 import 'package:meditrack_app/screens/auth/login_screen.dart';
 import 'package:meditrack_app/screens/auth/register_screen.dart';
@@ -36,25 +38,38 @@ class MediTrackApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MedicineProvider()),
       ],
-      child: MaterialApp(
-        title: 'MediTrack',
-        debugShowCheckedModeBanner: false,
-        themeMode: ThemeMode.dark,
-        theme: ThemeData(
-          useMaterial3: true,
-          brightness: Brightness.dark,
-          scaffoldBackgroundColor: AppColors.darkBackground,
-          colorSchemeSeed: AppColors.primary,
-        ),
-        home: const AuthGate(),
-        routes: {
-          '/home': (context) => const HomeScreen(),
-          '/login': (context) => const LoginScreen(),
-          '/register': (context) => const RegisterScreen(),
-          '/add-medicine': (context) => const AddMedicineScreen(),
+      child: Consumer<LocaleProvider>(
+        builder: (context, localeProvider, _) {
+          return MaterialApp(
+            title: 'MediTrack',
+            debugShowCheckedModeBanner: false,
+            themeMode: ThemeMode.dark,
+            locale: localeProvider.locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            theme: ThemeData(
+              useMaterial3: true,
+              brightness: Brightness.dark,
+              scaffoldBackgroundColor: AppColors.darkBackground,
+              colorSchemeSeed: AppColors.primary,
+            ),
+            home: const AuthGate(),
+            routes: {
+              '/home': (context) => const HomeScreen(),
+              '/login': (context) => const LoginScreen(),
+              '/register': (context) => const RegisterScreen(),
+              '/add-medicine': (context) => const AddMedicineScreen(),
+            },
+          );
         },
       ),
     );

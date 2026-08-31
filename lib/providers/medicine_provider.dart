@@ -62,20 +62,34 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<void> addMedicine(MedicineModel medicine) async {
+    // 1. Firestore'a kaydet
     await _firestoreService.addMedicine(medicine);
-    // Alarm kur
-    await NotificationService.instance.scheduleDailyMedicineReminder(medicine);
+    
+    // 2. Alarm ve Bildirim kur (hata olursa bile işlemi kilitlemez)
+    try {
+      await NotificationService.instance.scheduleDailyMedicineReminder(medicine);
+    } catch (e) {
+      debugPrint('Alarm kurma uyarısı/hatası: $e');
+    }
   }
 
   Future<void> updateMedicine(MedicineModel medicine) async {
     await _firestoreService.updateMedicine(medicine);
-    await NotificationService.instance.scheduleDailyMedicineReminder(medicine);
+    try {
+      await NotificationService.instance.scheduleDailyMedicineReminder(medicine);
+    } catch (e) {
+      debugPrint('Alarm güncelleme hatası: $e');
+    }
   }
 
   Future<void> deleteMedicine(String medicineId) async {
     if (_userId == null) return;
     await _firestoreService.deleteMedicine(_userId!, medicineId);
-    await NotificationService.instance.cancelReminder(medicineId.hashCode.abs());
+    try {
+      await NotificationService.instance.cancelReminder(medicineId.hashCode.abs());
+    } catch (e) {
+      debugPrint('Alarm iptal hatası: $e');
+    }
   }
 
   Future<void> takeDose(MedicineModel medicine) async {

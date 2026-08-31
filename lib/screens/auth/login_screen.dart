@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:meditrack_app/core/constants/app_colors.dart';
+import 'package:meditrack_app/core/localization/app_localizations.dart';
+import 'package:meditrack_app/providers/locale_provider.dart';
+import 'package:meditrack_app/screens/widgets/language_selector_sheet.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,12 +42,22 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
-      String msg = 'Giriş yapılamadı.';
-      if (e.code == 'user-not-found') msg = 'Kullanıcı bulunamadı.';
-      if (e.code == 'wrong-password') msg = 'Hatalı şifre.';
+      String msg = context.tr('login_error');
+      if (e.code == 'user-not-found') msg = context.tr('user_not_found');
+      if (e.code == 'wrong-password') msg = context.tr('wrong_password');
+      if (e.code == 'invalid-email') msg = context.tr('invalid_email');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(msg), backgroundColor: AppColors.danger),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('generic_error', params: {'error': e.toString()})),
+            backgroundColor: AppColors.danger,
+          ),
         );
       }
     } finally {
@@ -53,12 +67,54 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
+    final currentLang = AppLocalizations.supportedLanguages.firstWhere(
+      (l) => l.code == localeProvider.languageCode,
+      orElse: () => AppLocalizations.supportedLanguages.first,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          InkWell(
+            onTap: () => LanguageSelectorSheet.show(context),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.darkCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.darkBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(currentLang.flag, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  Text(
+                    currentLang.code.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.arrow_drop_down, color: AppColors.primaryLight, size: 16),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -77,10 +133,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Icon(Icons.medication, color: AppColors.primary, size: 36),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'MediTrack',
+                  Text(
+                    context.tr('app_name'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textLight,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -88,10 +144,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  const Text(
-                    'İlaçlarınızı ve Sağlığınızı Güvenle Takip Edin',
+                  Text(
+                    context.tr('app_tagline'),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                   ),
                   const SizedBox(height: 32),
 
@@ -110,7 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           style: const TextStyle(color: AppColors.textLight, fontSize: 14),
                           decoration: InputDecoration(
-                            labelText: 'E-posta',
+                            labelText: context.tr('email'),
                             labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                             prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textMuted, size: 20),
                             filled: true,
@@ -125,7 +181,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                             ),
                           ),
-                          validator: (val) => (val == null || val.isEmpty) ? 'E-posta gerekli' : null,
+                          validator: (val) =>
+                              (val == null || val.isEmpty) ? context.tr('field_required') : null,
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -133,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: _obscurePassword,
                           style: const TextStyle(color: AppColors.textLight, fontSize: 14),
                           decoration: InputDecoration(
-                            labelText: 'Şifre',
+                            labelText: context.tr('password'),
                             labelStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
                             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textMuted, size: 20),
                             suffixIcon: IconButton(
@@ -156,7 +213,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                             ),
                           ),
-                          validator: (val) => (val == null || val.length < 6) ? 'En az 6 karakter' : null,
+                          validator: (val) =>
+                              (val == null || val.length < 6) ? context.tr('min_6_char') : null,
                         ),
                       ],
                     ),
@@ -180,7 +238,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               height: 22,
                               child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                             )
-                          : const Text('Giriş Yap', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          : Text(
+                              context.tr('login'),
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -189,12 +250,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Hesabınız yok mu?', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
+                      Text(
+                        context.tr('no_account'),
+                        style: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                      ),
                       TextButton(
                         onPressed: () => Navigator.pushNamed(context, '/register'),
-                        child: const Text(
-                          'Kayıt Ol',
-                          style: TextStyle(color: AppColors.primaryLight, fontWeight: FontWeight.bold, fontSize: 13),
+                        child: Text(
+                          context.tr('register'),
+                          style: const TextStyle(
+                            color: AppColors.primaryLight,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],

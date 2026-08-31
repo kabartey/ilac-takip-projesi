@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart';
 import 'package:meditrack_app/core/constants/app_colors.dart';
+import 'package:meditrack_app/core/localization/app_localizations.dart';
 import 'package:meditrack_app/models/user_model.dart';
+import 'package:meditrack_app/providers/locale_provider.dart';
+import 'package:meditrack_app/screens/widgets/language_selector_sheet.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -69,8 +73,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Kayıt başarıyla tamamlandı!'),
+            SnackBar(
+              content: Text(context.tr('register_and_start')),
               backgroundColor: AppColors.primary,
             ),
           );
@@ -78,13 +82,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
         }
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage = 'Bir hata oluştu.';
+      String errorMessage = context.tr('generic_error', params: {'error': ''});
       if (e.code == 'weak-password') {
-        errorMessage = 'Şifre çok zayıf. En az 6 karakter giriniz.';
+        errorMessage = context.tr('weak_password');
       } else if (e.code == 'email-already-in-use') {
-        errorMessage = 'Bu e-posta adresi zaten kullanımda.';
+        errorMessage = context.tr('email_in_use');
       } else if (e.code == 'invalid-email') {
-        errorMessage = 'Geçersiz e-posta formatı.';
+        errorMessage = context.tr('invalid_email');
       } else {
         errorMessage = e.message ?? errorMessage;
       }
@@ -94,6 +98,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           SnackBar(content: Text(errorMessage), backgroundColor: AppColors.danger),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.tr('generic_error', params: {'error': e.toString()})),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -101,6 +114,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final localeProvider = context.watch<LocaleProvider>();
+    final currentLang = AppLocalizations.supportedLanguages.firstWhere(
+      (l) => l.code == localeProvider.languageCode,
+      orElse: () => AppLocalizations.supportedLanguages.first,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
@@ -108,13 +127,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textLight, size: 20),
+          icon: Icon(
+            context.isRTL ? Icons.arrow_forward_ios : Icons.arrow_back_ios_new,
+            color: AppColors.textLight,
+            size: 20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
-          'Kayıt Ol',
-          style: TextStyle(color: AppColors.textLight, fontWeight: FontWeight.bold, fontSize: 18),
+        title: Text(
+          context.tr('register'),
+          style: const TextStyle(
+            color: AppColors.textLight,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
+        actions: [
+          InkWell(
+            onTap: () => LanguageSelectorSheet.show(context),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.darkCard,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.darkBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(currentLang.flag, style: const TextStyle(fontSize: 16)),
+                  const SizedBox(width: 4),
+                  Text(
+                    currentLang.code.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppColors.primaryLight,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -124,53 +181,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'Hesap Oluşturun',
-                  style: TextStyle(color: AppColors.textLight, fontSize: 24, fontWeight: FontWeight.w800),
+                Text(
+                  context.tr('create_account_title'),
+                  style: const TextStyle(
+                    color: AppColors.textLight,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 6),
-                const Text(
-                  'İlaçlarınızı düzenli takip etmek ve acil durumlarda yakınınızı bilgilendirmek için bilgilerinizi giriniz.',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 13, height: 1.4),
+                Text(
+                  context.tr('create_account_desc'),
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(Icons.person_outline, 'Kişisel Bilgiler'),
+                _buildSectionHeader(Icons.person_outline, context.tr('personal_info')),
                 const SizedBox(height: 12),
                 _buildCardWrapper([
-                  _buildTextField(_fullNameController, 'Ad Soyad', 'Örn: Ahmet Yılmaz', Icons.badge_outlined),
+                  _buildTextField(
+                    _fullNameController,
+                    context.tr('full_name'),
+                    context.tr('name_example'),
+                    Icons.badge_outlined,
+                  ),
                   const SizedBox(height: 14),
-                  _buildTextField(_emailController, 'E-posta', 'ornek@email.com', Icons.email_outlined,
-                      keyboardType: TextInputType.emailAddress),
+                  _buildTextField(
+                    _emailController,
+                    context.tr('email'),
+                    'ornek@email.com',
+                    Icons.email_outlined,
+                    keyboardType: TextInputType.emailAddress,
+                  ),
                   const SizedBox(height: 14),
                   _buildTextField(
                     _passwordController,
-                    'Şifre',
-                    'En az 6 karakter',
+                    context.tr('password'),
+                    context.tr('min_6_char'),
                     Icons.lock_outline,
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: AppColors.textMuted, size: 20),
+                      icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        color: AppColors.textMuted,
+                        size: 20,
+                      ),
                       onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _buildTextField(_phoneController, 'Telefon Numarası', '05XX XXX XX XX', Icons.phone_outlined,
-                      keyboardType: TextInputType.phone),
+                  _buildTextField(
+                    _phoneController,
+                    context.tr('phone_number'),
+                    context.tr('phone_example'),
+                    Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
                 ]),
 
                 const SizedBox(height: 24),
 
-                _buildSectionHeader(Icons.favorite_border, 'Hasta Yakını Bilgileri (Acil Durum)'),
+                _buildSectionHeader(Icons.favorite_border, context.tr('emergency_contact')),
                 const SizedBox(height: 12),
                 _buildCardWrapper([
-                  _buildTextField(_relativeFullNameController, 'Yakının Adı Soyadı', 'Örn: Ayşe Yılmaz (Kızı)',
-                      Icons.people_outline),
+                  _buildTextField(
+                    _relativeFullNameController,
+                    context.tr('relative_name'),
+                    context.tr('relative_example'),
+                    Icons.people_outline,
+                  ),
                   const SizedBox(height: 14),
-                  _buildTextField(_relativePhoneController, 'Yakının Telefon Numarası', '05XX XXX XX XX',
-                      Icons.contact_phone_outlined,
-                      keyboardType: TextInputType.phone),
+                  _buildTextField(
+                    _relativePhoneController,
+                    context.tr('relative_phone'),
+                    context.tr('phone_example'),
+                    Icons.contact_phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
                 ]),
 
                 const SizedBox(height: 32),
@@ -191,8 +282,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             height: 24,
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
                           )
-                        : const Text('Kayıt Ol ve Başla',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        : Text(
+                            context.tr('register_and_start'),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -267,7 +360,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
         ),
       ),
-      validator: (val) => (val == null || val.trim().isEmpty) ? '$label boş bırakılamaz.' : null,
+      validator: (val) =>
+          (val == null || val.trim().isEmpty) ? context.tr('field_required') : null,
     );
   }
 }

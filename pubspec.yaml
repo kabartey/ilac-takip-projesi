@@ -9,9 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # State Management
   provider: ^6.1.2
+
+  # Yerel Depolama (Dil & Ayarlar Tercihi)
+  shared_preferences: ^2.3.5
 
   # Firebase Servisleri
   firebase_core: ^3.10.1
