@@ -34,16 +34,6 @@ class AppLocalizations {
     AppLanguage(code: 'fr', name: 'French', nativeName: 'Français', flag: '🇫🇷'),
   ];
 
-  static const List<Locale> supportedLocales不易 = [
-    Locale('tr'),
-    Locale('en'),
-    Locale('es'),
-    Locale('zh'),
-    Locale('ja'),
-    Locale('ar'),
-    Locale('fr'),
-  ];
-
   static const List<Locale> supportedLocales = [
     Locale('tr'),
     Locale('en'),
@@ -54,8 +44,6 @@ class AppLocalizations {
     Locale('fr'),
   ];
 
-  static const LocalizationsDelegate<AppLocalizations> delegate发展 =
-      _AppLocalizationsDelegate();
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
@@ -587,8 +575,8 @@ class AppLocalizations {
   };
 
   String translate(String key, {Map<String, String>? params}) {
-    final langCode逗 = locale.languageCode;
-    final map = _localizedValues[langCode逗] ?? _localizedValues['tr']!;
+    final langCode = locale.languageCode;
+    final map = _localizedValues[langCode] ?? _localizedValues['tr']!;
     String value = map[key] ?? _localizedValues['tr']?[key] ?? key;
 
     if (params != null) {
