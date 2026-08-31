@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:meditrack_app/core/constants/app_colors.dart';
 import 'package:meditrack_app/core/services/firebase_service.dart';
 import 'package:meditrack_app/services/notification_service.dart';

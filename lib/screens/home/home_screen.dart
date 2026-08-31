@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:meditrack_app/core/constants/app_colors.dart';
 import 'package:meditrack_app/models/medicine_model.dart';
